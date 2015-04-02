@@ -77,13 +77,13 @@ _The './data' including following parts:_
 
 
 ###Default System:
-
+----
 > 'one2one.py' generates a default output translation '1-best.en' based on word to word translation, ignoring language models.
 
 
 
 ###Objective function:
-
+----
 > 'compute-bleu.py' computes the BLEU score from stdin. 
 
 > We can use
