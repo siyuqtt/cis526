@@ -1,6 +1,40 @@
 # cis526
 ##MT term project
-_The task is to translate from Urdu to English using existing grammar rules and language models._
+> The task is to translate from Urdu to English using existing grammar rules and language models.
+
+> In the main directory, use the command to run the default system:
+
+>	python one2one.py
+
+> This program will generate a file called '1-best.en'. It uses a very simple method to generate a translation based  on word-to-word translation and ignores complex grammars and language models. 
+	
+	word_e = argmax_P(word_e|word_f) word_e
+
+> To test the result, use the command:
+
+	python compute-bleu.py < 1-best.en
+	The program will evaluate the translation using BLEU score, and print the BLEU stats features as well as the BLEU score.
+	The stats are a 10-element tuple, in the form of:
+	(
+		word count in hypothesis, 
+		effective word count in reference set, 
+		1-gram matches in hypothesis, 
+		1-gram count in hypothesis, 
+		2-gram matches in hypothesis,
+		2-gram count in hypothesis, 
+		3-gram matches in hypothesis, 
+		3-gram count in hypothesis, 
+		4-gram matches in hypothesis, 
+		4-gram count in hypothesis
+	)
+
+	And the BLEU score is counted using the formula:
+	
+	score = exp(min(0,(1 - refcount/hypcount))+ln(1grammatch/1gramcount)+ln(2grammatch/2gramcount)+ln(3grammatch/3gramcount)+ln(4grammatch/4gramcount))
+	score = exp(min(0, 1-rc)+ln(1grammatch1gramcount)+ln(2grammatch2gramcount)+ln(3grammatch3gramcount)+ln(4grammatch4gramcount))
+
+The student's task is to improve the score as much as possible.
+
 
 ###Data
 -----
