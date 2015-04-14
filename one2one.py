@@ -21,7 +21,7 @@ for k,v in dic.items():
     sortv = sorted(v.items(), key = lambda x : -x[1] )
     topdic[k] = sortv.pop(0)[0]
    # print k, topdic[k]
-fout = open('1-best.en','w')
+
 with open('./data/devtest.ur') as fin:
     for line in fin:
         oris = line.strip().split()
@@ -32,8 +32,7 @@ with open('./data/devtest.ur') as fin:
                 trans += " "
             else:
                 trans += topdic.get(o, "")+" "
-        fout.write(trans + '\n')
-fout.close()
-print "finish"    
+        print trans
+
         
     
