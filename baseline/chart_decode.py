@@ -10,35 +10,11 @@ optparser.add_option("-g", "--grammar-model", dest="gm", default="../data/gramma
 optparser.add_option("-l", "--language-model", dest="lm", default="../data/lm", help="File containing ARPA-format language model (default=data/lm)")
 optparser.add_option("-n", "--num_sentences", dest="num_sents", default=sys.maxint, type="int", help="Number of sentences to decode (default=no limit)")
 optparser.add_option("-k", "--translations-per-phrase", dest="k", default=10, type="int", help="Limit on number of translations to consider per phrase (default=1)")
-
-
+optparser.add_option("-s", "--stack-size", dest="s", default=17, type="int", help="Maximum stack size (default=1)")
+optparser.add_option("-v", "--verbose", dest="verbose", action="store_true", default=False,  help="Verbose mode (default=off)")
 opts = optparser.parse_args()[0]
 
-
-"""
-#grammar rules format
-dict rules={rules in ur: [rule_prop1, rule_prop2]}
-class rule_hyp:
-	self.en = [word1, word2, ..., [X,1], ..wordn, [X,2]]
-	self.pe_given_f = p(e|f) 
-	self.pf_given_e = p(f|e) 
-
-class chart_entry:
-	self.prob
-	self.en
-"""
-class rule_hyp:
-	def __init__(self, en=[], pe_given_f=1, pf_given_e=1, align=[]):
-		self.en=en
-		self.pe_given_f=pe_given_f
-		self.pf_given_e=pf_given_e
-		self.align=align
-		self.prob = self.pe_given_f+ self.pf_given_e
-
-class chart_entry:
-	def __init__(self, en=[], prob=1):
-		self.prob=prob
-		self.en=en
+#language model read in
 ngram_stats = namedtuple("ngram_stats", "logprob, backoff")
 class LM:
 	def __init__(self, filename):
@@ -73,22 +49,43 @@ def lmscore(en):
 		(lm_state, word_logprob) = lm.score(lm_state, word)
 		lm_logprob -= word_logprob
 	return lm_logprob
-  
+
+#grammar rules format and read
+class rule_hyp:
+	def __init__(self,  en=[], pe_given_f=1, pf_given_e=1):
+		self.en=en
+		self.pe_given_f=pe_given_f
+		self.pf_given_e=pf_given_e
+		#use weight to calculate score
+		self.prob = (self.pe_given_f + self.pf_given_e)/2
+
 rules=defaultdict(list)
+
 with open(opts.gm) as fin:
-    for line in fin:
-        parts = line.strip().split('|||')
-        ori = parts[1].strip().split()
-        hypo = parts[2].strip().split()
-        pe_given_f=float(parts[3].strip().split()[0])
-        pf_given_e=float(parts[3].strip().split()[1])
-        align = parts[-1].strip().split()
+	for line in fin:
+		parts = line.strip().split('|||')
+		ori = parts[1].strip().split()
+		hypo = parts[2].strip().split()
+		features = parts[3].strip().split()
+		pe_given_f=float(features[0])
+		pf_given_e=float(features[1])
 
-        rules[tuple(ori)].append(rule_hyp(en=hypo, pe_given_f=pe_given_f, pf_given_e=pf_given_e, align=align))
+		rules[tuple(ori)].append(rule_hyp(en=hypo,pe_given_f=pe_given_f, pf_given_e=pf_given_e))
 
 
-rules[("'")].append(rule_hyp(en=[["'"]], pe_given_f=0, pf_given_e=0, align=[]))
-rules[(".")].append(rule_hyp(en=[["."]], pe_given_f=0, pf_given_e=0, align=[]))
+rules[("'")].append(rule_hyp(en=[["'"]], pe_given_f=0, pf_given_e=0))
+rules[(".")].append(rule_hyp(en=[["."]], pe_given_f=0, pf_given_e=0))
+
+#start chart decode
+#define chart entry
+#chart is a dict
+class chart_entry:
+	def __init__(self, en=[], tmprob=1, lmprob = 1):
+		self.tmprob=tmprob
+		self.lmprob=lmprob
+		self.prob=tmprob+lmprob
+		self.en=en
+
 with open(opts.input) as fin:
 	for line in fin:
 		chart=dict()
@@ -99,7 +96,9 @@ with open(opts.input) as fin:
 				# the situation with only [X,1]
 				if rules.has_key(tuple(oris[start:end])):
 					min_rulehyp = min(rules[tuple(oris[start:end])], key=lambda x: x.prob)
-					chart[(start,end)]=chart_entry(en=min_rulehyp.en, prob=(min_rulehyp.prob+lmscore(min_rulehyp.en)))
+					en = min_rulehyp.en
+					en_lmscore=lmscore(en)
+					chart[(start,end)]=chart_entry(en=min_rulehyp.en, tmprob=min_rulehyp.prob, lmprob=en_lmscore)
 					#continue
 				if span>1:
 					for i1 in range(start, end):
@@ -111,13 +110,12 @@ with open(opts.input) as fin:
 									for rulehyp in rules[seq]:
 										en = rulehyp.en[:rulehyp.en.index('[X,1]')] + chart[(i1, j1)].en + rulehyp.en[rulehyp.en.index('[X,1]')+1:]
 										en_lmscore = lmscore(en);
-										prob = rulehyp.prob + chart[(i1,j1)].prob + en_lmscore
+										tmprob = rulehyp.prob + chart[(i1,j1)].tmprob
 										if chart.has_key((start,end)):
-											if chart[(start,end)].prob > prob:
-												chart[(start,end)].prob = prob
-												chart[(start,end)].en = en
+											if chart[(start,end)].prob > tmprob + en_lmscore:
+												chart[(start,end)]=chart_entry(en=en, tmprob = tmprob, lmprob = en_lmscore)
 										else:
-											chart[(start,end)]=chart_entry(en=en, prob=prob)
+											chart[(start,end)]=chart_entry(en=en, tmprob = tmprob, lmprob = en_lmscore)
 				# the situation with [X,1] and [X,2]
 				if span>2:
 					for i1 in range(start, end):
@@ -127,7 +125,6 @@ with open(opts.input) as fin:
 									if chart.has_key((i1, j1)) and chart.has_key((i2, j2)):
 										seq = tuple(oris[start:i1]+['[X,1]']+oris[j1:i2]+['[X,2]']+oris[j2:end])
 										if rules.has_key(seq):
-											#print (' ').join(seq)
 											for rulehyp in rules[seq]:
 												index1 = rulehyp.en.index('[X,1]')
 												index2 = rulehyp.en.index('[X,2]')
@@ -137,52 +134,29 @@ with open(opts.input) as fin:
 												else:
 													en = rulehyp.en[:index2] + chart[(i2, j2)].en + rulehyp.en[index2+1:index1] + chart[(i1, j1)].en + rulehyp.en[index1+1:]
 												en_lmscore=lmscore(en)
-												prob=rulehyp.prob + chart[(i1,j1)].prob + chart[(i2, j2)].prob + en_lmscore
+												tmprob=rulehyp.prob + chart[(i1,j1)].tmprob + chart[(i2, j2)].tmprob
 												if chart.has_key((start, end)):
-													if chart[(start,end)].prob > prob:
-					 									chart[(start,end)].prob = prob
-					 									chart[(start,end)].en = en
+													if chart[(start,end)].prob > tmprob + en_lmscore:
+					 									chart[(start,end)]=chart_entry(en=en, tmprob = tmprob, lmprob = en_lmscore)
 												else:
-													chart[(start,end)]=chart_entry(en=en, prob=prob)
+													chart[(start,end)]=chart_entry(en=en, tmprob = tmprob, lmprob = en_lmscore)
 											
-										"""
-										seq = tuple(oris[start:i1]+['[X,2]']+oris[j1:i2]+['[X,1]']+oris[j2:])
-										if rules.has_key(seq):
-											print (' ').join(seq)
-											min_rulehyp = min(rules[seq], key=lambda x: x.pe_given_f)
-											print min_rulehyp.en
-											if chart.has_key((start, end)):
-												if chart[(start,end)].prob> min_rulehyp.pe_given_f + chart[(i1,j1)].prob + chart[(i2, j2)].prob:
-				 									chart[(start,end)].prob = min_rulehyp.pe_given_f + chart[(i1,j1)].prob + chart[(i2, j2)].prob
-													index1 = min_rulehyp.en.index('[X,2]')
-													index2 = min_rulehyp.en.index('[X,1]')
-													chart[(start,end)].en = min_rulehyp.en[:index1] + chart[(i1, j1)].en + min_rulehyp.en[index1+1:index2] + chart[(i2, j2)].en + min_rulehyp.en[index2+1:]
-											else:
-												prob = min_rulehyp.pe_given_f + \
-														chart[(i1,j1)].prob + chart[(i2, j2)].prob
-												index1 = min_rulehyp.en.index('[X,2]')
-												index2 = min_rulehyp.en.index('[X,1]')
-												en = min_rulehyp.en[:index1] + \
-														chart[(i1, j1)].en + min_rulehyp.en[index1+1:index2] + \
-														chart[(i1, j1)].en + min_rulehyp.en[index2+1:]
-												chart[(start, end)] = chart_entry(prob=prob, en=en)
-										"""
 				if span==1: #span==1
 					if not rules.has_key(tuple(oris[start:end])):
-						chart[(start,end)]=chart_entry(en=oris[start:end], prob=20)
+						en_lmscore=lmscore(oris[start:end])
+						chart[(start,end)]=chart_entry(en=oris[start:end], tmprob=20, lmprob=en_lmscore)
 				#if not chart.has_key((start, end)):
 				for i in range(start+1, end):
 						if chart.has_key((start, i)) and chart.has_key((i, end)):
 							en = chart[(start, i)].en + chart[(i, end)].en
 							en_lmscore = lmscore(en)
-							prob = chart[(start, i)].prob + chart[(i, end)].prob + en_lmscore #as penalty
+							tmprob = chart[(start, i)].tmprob + chart[(i, end)].tmprob  #as penalty
 							if not chart.has_key((start, end)):
-								chart[(start, end)] = chart_entry(en=en, prob=prob)
-							elif chart[(start, end)].prob > prob:
-								chart[(start, end)] = chart_entry(en=en, prob=prob)
-				#print start, end, chart[(start, end)].prob
-				#print (' ').join(chart[(start, end)].en)			
+								chart[(start, end)] = chart_entry(en=en, tmprob=tmprob, lmprob=en_lmscore)
+							elif chart[(start, end)].prob > tmprob + en_lmscore:
+								chart[(start, end)] = chart_entry(en=en, tmprob=tmprob, lmprob=en_lmscore)
 		print (' ').join(chart[(0, len(oris))].en)
-		#_=raw_input("press any key to continue")
+		sys.stderr.write(".")
+
 		
 
