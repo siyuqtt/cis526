@@ -9,7 +9,7 @@ The task is to translate from Urdu to English using existing grammar rules and l
 
 To begin, download the starter kit. You may either choose to develop locally or on Penn servers. For the latter, we recommend using the Biglab machines, whose memory and runtime restrictions are much less stringent than those on Eniac. The Biglab servers can be accessed directly using the command ssh PENNKEY@biglab.seas.upenn.edu, or from Eniac using the command ssh biglab.
 
-To get started, download the kit and run the default system using the command:
+You can run the default system using the command:
 
 ```python
 ./default > 1-best.en
@@ -67,11 +67,10 @@ _The './test-data' including the sentence to be translated:_
 
 ###The Challenge
 ----
-Your work is to increase the BLEU score as much as you can. Implementing CKY algorithm and integrating language model with some simple feature engineering will help you beat the baseline. To improve:
-  * Adding LM, TM, Alignment score to choose rules
-  * Using MERT/PRO to tune the weight for each score
+Your work is to increase the BLEU score as much as you can. Implementing CKY algorithm and integrating language model with some simple feature engineering will help you beat the baseline. Specific algorithm can be found on textbook chapter 11. To improve:
+  * Adding LM, TM, Alignment feature to choose rules
+  * Using MERT/PRO to tune the weight of the features
   * Increase the number of candidates hypothesis for original language intervals 
-  * references: textbook chapter 11
   * [Details about CKY](http://pages.cs.wisc.edu/~agorenst/cyk.pdf)  
   * [pseudo code for CKY](http://pages.cs.wisc.edu/~agorenst/cyk.pdf)
   * [An efficient version of CKY](http://www.petrovi.de/data/iwpt11.pdf)
