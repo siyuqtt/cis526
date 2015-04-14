@@ -65,7 +65,7 @@ _The './test-data' including the sentence to be translated:_
 
 
 
-###The Challenge
+##The Challenge
 ----
 Your work is to increase the BLEU score as much as you can. Implementing CKY algorithm and integrating language model with some simple feature engineering will help you beat the baseline. Specific algorithm can be found on textbook chapter 11. To improve:
   * Adding LM, TM, Alignment feature to choose rules
@@ -75,7 +75,7 @@ Your work is to increase the BLEU score as much as you can. Implementing CKY alg
   * [pseudo code for CKY](http://pages.cs.wisc.edu/~agorenst/cyk.pdf)
   * [An efficient version of CKY](http://www.petrovi.de/data/iwpt11.pdf)
   
-###Ground rules
+##Ground rules
 ------
 1. You must work independently on this assignment.
 
