@@ -22,7 +22,7 @@ To test the result, use the command:
 ```python
 	./grade < 1-best.en
 ```
-	The program will evaluate the translation using BLEU score, and print the BLEU stats features as well as the BLEU score.
+The program will evaluate the translation using BLEU score, and print the BLEU stats features as well as the BLEU score.
 
 Your task is to improve the score as much as possible.
 
