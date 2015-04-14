@@ -1,5 +1,6 @@
 ##Extention 1
-* Adding more feature LM, TM and alignment score to choose translation when one matching a grammar
+* Adding more feature LM, TM score to choose translation when one matching a grammar
+* Also, we use Joshua to tune the weight of these to score, the weighted sum of these two helps to choose a locally best translation 
 * The bleu score of this extention is: 
 
 ##Extention 2
