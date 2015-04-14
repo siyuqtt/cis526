@@ -7,6 +7,8 @@ The task is to translate from Urdu to English using existing grammar rules and l
 
 ##Getting Started
 
+To begin, download the starter kit. You may either choose to develop locally or on Penn servers. For the latter, we recommend using the Biglab machines, whose memory and runtime restrictions are much less stringent than those on Eniac. The Biglab servers can be accessed directly using the command ssh PENNKEY@biglab.seas.upenn.edu, or from Eniac using the command ssh biglab.
+
 To get started, download the kit and run the default system using the command:
 
 ```python
